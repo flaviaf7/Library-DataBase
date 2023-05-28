@@ -1,0 +1,394 @@
+-- CREARE TABELE
+
+-- LOCATIE
+
+CREATE TABLE locatie (
+	id_locatie NUMBER(10) constraint pk_locatie primary key,
+	oras VARCHAR2(20),
+	strada VARCHAR2(50),
+	cod_postal VARCHAR2(15) UNIQUE
+);
+
+-- BIBLIOTECA
+
+CREATE TABLE biblioteca (
+	id_biblioteca NUMBER(10) constraint pk_biblioteca primary key,
+	id_locatie NUMBER(10) constraint fk_biblioteca_locatie references locatie(id_locatie),
+	nume_biblioteca VARCHAR2(20) UNIQUE,  --modificat ulterior in VARCHAR2(50)
+	website VARCHAR2(50) UNIQUE,
+	data_infiintare DATE constraint data_infiintare not null
+);
+
+-- BIBLIOTECAR
+
+CREATE TABLE bibliotecar (
+	id_bibliotecar NUMBER(10) constraint pk_bibliotecar primary key,
+	id_biblioteca NUMBER(10) constraint fk_biblioteca references biblioteca(id_biblioteca),
+	nume__bibliotecar VARCHAR2(20),
+	data_angajare DATE default sysdate,
+	salariu NUMBER(10)
+);
+
+alter table bibliotecar
+rename column nume__bibliotecar to nume_bibliotecar;
+
+-- MEMBRU
+
+CREATE TABLE membru (
+	id_membru NUMBER(10) constraint pk_membru primary key,
+	nume VARCHAR2(20),
+	prenume VARCHAR2(20),
+	data_nastere DATE,
+	nr_telefon VARCHAR2(10)
+);
+
+-- GEN
+
+CREATE TABLE gen (
+	id_gen NUMBER(10) constraint pk_gen primary key,
+    nume_gen VARCHAR2(20)
+);
+
+-- EDITURA
+
+CREATE TABLE editura (
+    id_editura NUMBER(10) constraint pk_editura primary key,
+    nume_editura VARCHAR2(25) UNIQUE,
+    email VARCHAR2(30),
+    nr_telefon VARCHAR2(10),
+    an_infiintare NUMBER(4)
+);
+
+-- AUTOR
+
+CREATE TABLE autor (
+    id_autor NUMBER(10) constraint pk_autor primary key,
+    nume_autor VARCHAR2(40) UNIQUE,
+    nationalitate VARCHAR2(20),
+    sex CHAR(1),
+    data_nastere DATE default sysdate,
+    data_deces DATE default null,
+    CONSTRAINT chk_date CHECK (data_nastere < data_deces)
+);
+
+-- CARTE
+
+CREATE TABLE carte (
+    id_carte NUMBER(10) constraint pk_carte primary key,
+    titlu VARCHAR2(30) UNIQUE,
+    nr_pagini NUMBER(5),
+    limba VARCHAR2(30)
+);
+
+-- tabelul asociativ PUBLICA
+
+CREATE TABLE publica (
+    id_carte NUMBER(10),
+    id_autor NUMBER(10),
+    id_editura NUMBER(10),
+    data_publicare DATE default sysdate,
+    constraint fk_publica_autor foreign key(id_autor) references autor(id_autor),
+    constraint fk_publica_carte foreign key(id_carte) references carte(id_carte),
+    constraint fk_publica_editura foreign key(id_editura) references editura(id_editura),
+    constraint pk_compus_publica primary key(id_autor, id_carte, id_editura)
+);
+
+-- tabelul asociativ IMPRUMUTA
+
+CREATE TABLE imprumuta (
+    id_carte NUMBER(10),
+    id_membru NUMBER(10),
+    id_bibliotecar NUMBER(10),
+    data_imprumut DATE default sysdate,
+    data_restituire DATE default null,
+    constraint fk_imprumuta_carte foreign key(id_carte) references carte(id_carte),
+    constraint fk_imprumuta_membru foreign key(id_membru) references membru(id_membru),
+    constraint fk_imprumuta_bibliotecar foreign key(id_bibliotecar) references bibliotecar(id_bibliotecar),
+    constraint pk_compus_imprumuta primary key(id_carte,id_membru,id_bibliotecar)
+);
+
+-- tabelul asociativ CUMPARA
+
+CREATE TABLE cumpara (
+    id_carte NUMBER(10),
+    id_membru NUMBER(10),
+    id_bibliotecar NUMBER(10),
+    data_achizitie DATE default sysdate,
+    pret NUMBER(10),
+    constraint fk_cumpara_carte foreign key(id_carte) references carte(id_carte),
+    constraint fk_cumpara_membru foreign key(id_membru) references membru(id_membru),
+    constraint fk_cumpara_bibliotecar foreign key(id_bibliotecar) references bibliotecar(id_bibliotecar),
+    constraint pk_compus_cumpara primary key(id_carte,id_membru,id_bibliotecar)
+);
+
+-- tabelul asociativ ARE
+
+CREATE TABLE are (
+    id_carte NUMBER(10),
+    id_gen NUMBER(10),
+    constraint fk_are_carte foreign key(id_carte) references carte(id_carte),
+    constraint fk_are_gen foreign key(id_gen) references gen(id_gen),
+    constraint pk_compus_are primary key(id_carte,id_gen)
+);
+
+-- tabelul asociativ APARTINE
+
+CREATE TABLE apartine (
+    id_membru NUMBER(10),
+    id_biblioteca NUMBER(10),
+    constraint fk_apartine_membru foreign key(id_membru) references membru(id_membru),
+    constraint fk_apartine_biblioteca foreign key(id_biblioteca) references biblioteca(id_biblioteca)
+);
+
+
+
+--SECVENTE SI INSERARI TABELE
+
+
+--secventa + inserari LOCATIE
+
+create sequence id_locatie
+start with 1
+increment by 1
+minvalue 0
+maxvalue 9999
+nocycle;
+
+insert into locatie values(id_locatie.nextval, 'Bucuresti', 'Str. Boteanu', '010027');
+insert into locatie values(id_locatie.nextval, 'Cluj-Napoca', 'Calea Dorobantilor', '400394');
+insert into locatie values(id_locatie.nextval, 'Brasov', 'Bulevardul Eroilor', '500036');
+insert into locatie values(id_locatie.nextval, 'Craiova', 'Str. Mihail Kogalniceanu', '200390');
+insert into locatie values(id_locatie.nextval, 'Iasi', 'Strada Pacurari', '700511');
+insert into locatie values(id_locatie.nextval, 'Timisoara', 'Piata Libertatii', '300077');
+insert into locatie values(id_locatie.nextval, 'Cluj-Napoca', 'Str. Mihail Kogalniceanu', '400084');
+
+
+--secventa + inserari BIBLIOTECA
+
+create sequence id_biblioteca
+start with 1
+increment by 1
+minvalue 0
+maxvalue 9999
+nocycle;
+
+alter table biblioteca
+modify(nume_biblioteca varchar2(50));
+
+insert into biblioteca values (id_biblioteca.nextval, 4, 'Biblioteca Judeteana "Alexandru si Aristia Aman"',
+                                'www.aman.ro', TO_DATE('21-12-1908', 'DD-MM-YYYY'));
+insert into biblioteca values (id_biblioteca.nextval, 2, 'Biblioteca Judeteana "Octavian Goga"', 
+                                'www.new.bjc.ro', TO_DATE('15-10-1921', 'DD-MM-YYYY'));
+insert into biblioteca values (id_biblioteca.nextval, 5, 'Biblioteca Centrala Universitara "Mihai Eminescu',
+                                'www.bcu-iasi.ro', TO_DATE('05-07-1835', 'DD-MM-YYYY'));
+insert into biblioteca values (id_biblioteca.nextval, 1, 'Biblioteca Centrala Universitara "Carol I"',
+                                'www.bcub.ro', TO_DATE('12-07-1948', 'DD-MM-YYYY'));
+insert into biblioteca values (id_biblioteca.nextval, 3, 'Biblioteca Judeteana "Gheorghe Baritiu"',
+                                'www.bjbv.ro', TO_DATE('30-03-1928', 'DD-MM-YYYY'));
+insert into biblioteca values (id_biblioteca.nextval, 7, 'Biblioteca de Fizica',
+                                'www.bcucluj.ro', TO_DATE('20-04-1922', 'DD-MM-YYYY'));
+
+
+--secventa + inserari BIBLIOTECAR
+
+create sequence id_bibliotecar
+start with 1
+increment by 1
+minvalue 0
+maxvalue 9999
+nocycle;
+
+insert into bibliotecar values (id_bibliotecar.nextval, 2, 'Andrei Vasile', TO_DATE('04-05-2010', 'DD-MM-YYYY'), 3200);
+insert into bibliotecar values (id_bibliotecar.nextval, 5, 'Pop Maria', TO_DATE('26-01-2011', 'DD-MM-YYYY'), 3000);
+insert into bibliotecar values (id_bibliotecar.nextval, 3, 'Buraga Stefania', TO_DATE('03-06-2020', 'DD-MM-YYYY'), 2300);
+insert into bibliotecar values (id_bibliotecar.nextval, 2, 'Huica Ruxandra', TO_DATE('26-11-2018', 'DD-MM-YYYY'), 2500);
+insert into bibliotecar values (id_bibliotecar.nextval, 1, 'Pricop Elena', TO_DATE('07-11-2009', 'DD-MM-YYYY'), 4000);
+insert into bibliotecar values (id_bibliotecar.nextval, 1, 'Simion Andreea', TO_DATE('15-04-2015', 'DD-MM-YYYY'), 2800);
+insert into bibliotecar values (id_bibliotecar.nextval, 4, 'Dodan Felicia', TO_DATE('21-11-2020', 'DD-MM-YYYY'), 2200);
+insert into bibliotecar values (id_bibliotecar.nextval, 4, 'Popa Andreea', TO_DATE('10-07-2007', 'DD-MM-YYYY'), 4100);
+insert into bibliotecar values (id_bibliotecar.nextval, 5, 'Ionescu Mihai', TO_DATE('12-05-2012', 'DD-MM-YYYY'), 3800);
+insert into bibliotecar values (id_bibliotecar.nextval, 5, 'Popovici David', TO_DATE('18-08-2017', 'DD-MM-YYYY'), 2600);
+insert into bibliotecar values (id_bibliotecar.nextval, 6, 'Bontea Bogdan', TO_DATE('17-05-2015', 'DD-MM-YYYY'), 2800);
+
+--secventa + inserari MEMBRU
+
+create sequence id_membru
+start with 1
+increment by 1
+minvalue 0
+maxvalue 9999
+nocycle;
+
+insert into membru values (id_membru.nextval, 'Dumitrescu', 'Marian', TO_DATE('08-09-1997','DD-MM-YYYY'), '0746372934');
+insert into membru values (id_membru.nextval, 'Stanciu', 'Carla', TO_DATE('25-04-1990','DD-MM-YYYY'), '0767464971');
+insert into membru values (id_membru.nextval, 'Ionescu', 'Alina', TO_DATE('03-03-2003','DD-MM-YYYY'), '0759873545');
+insert into membru values (id_membru.nextval, 'Popa', 'Georgiana', TO_DATE('07-01-1995','DD-MM-YYYY'), '0751982263');
+insert into membru values (id_membru.nextval, 'Radu', 'Mihaela', TO_DATE('10-10-1998','DD-MM-YYYY'), '0748665433');
+insert into membru values (id_membru.nextval, 'Radulescu', 'Ionut', TO_DATE('19-08-1994','DD-MM-YYYY'), '0742257992');
+insert into membru values (id_membru.nextval, 'Dumitru', 'Adrian', TO_DATE('25-11-2002','DD-MM-YYYY'), '0761234562');
+insert into membru values (id_membru.nextval, 'Stoica', 'Vasile', TO_DATE('15-05-2000','DD-MM-YYYY'), '0747564544');
+insert into membru values (id_membru.nextval, 'Voicu', 'Tudor', TO_DATE('26-02-2007','DD-MM-YYYY'), '0764555555');
+
+--secventa + inserari GEN
+
+create sequence id_gen
+start with 1
+increment by 1
+minvalue 0
+maxvalue 9999
+nocycle;
+
+insert into gen values(id_gen.nextval, 'Fictiune');
+insert into gen values(id_gen.nextval, 'Poezie');
+insert into gen values(id_gen.nextval, 'Romantic');
+insert into gen values(id_gen.nextval, 'Biografie');
+insert into gen values(id_gen.nextval, 'Mister');
+insert into gen values(id_gen.nextval, 'Dezvoltare personala');
+
+
+--secventa + inserari EDITURA
+
+create sequence id_editura
+start with 1
+increment by 1
+minvalue 0
+maxvalue 9999
+nocycle;
+
+insert into editura values(id_editura.nextval, 'Humanitas', 'www.humanitas.ro', '0763254758', 1990);
+insert into editura values(id_editura.nextval, 'Corint', 'www.corint.ro', '0214088350', 1994);
+insert into editura values(id_editura.nextval, 'Litera', 'www.litera.ro', '074567465', 1992);
+insert into editura values(id_editura.nextval, 'Nemira', 'www.nemira.ro', '0721747464', 1991);
+insert into editura values(id_editura.nextval, 'Berkley Books', 'www.berkley.ro', '0216356565', 1985);
+insert into editura values(id_editura.nextval, 'Trei', 'www.trei.ro', '0213006090', 1995);
+
+
+--secventa + inserari AUTOR
+
+create sequence id_autor
+start with 1
+increment by 1
+minvalue 0
+maxvalue 9999
+nocycle;
+
+insert into autor values (id_autor.nextval, 'Mircea Cartarescu', 'Roman', 'M',
+                        TO_DATE('01-06-1956', 'DD-MM-YYYY'), NULL);
+insert into autor values (id_autor.nextval, 'Elena Ferrante', 'Italian', 'F',
+                        TO_DATE('12-07-1943', 'DD-MM-YYYY'), NULL);
+insert into autor values (id_autor.nextval, 'George Orwell', 'Englez', 'M',
+                        TO_DATE('25-6-1903', 'DD-MM-YYYY'), TO_DATE('21-01-1950', 'DD-MM-YYYY'));
+insert into autor values (id_autor.nextval, 'Mihai Eminescu', 'Roman', 'M',
+                        TO_DATE('15-01-1850', 'DD-MM-YYYY'), TO_DATE('15-06-1889', 'DD-MM-YYYY'));
+insert into autor values (id_autor.nextval, 'Agatha Christie', 'Englez', 'F',
+                        TO_DATE('15-09-1890', 'DD-MM-YYYY'), TO_DATE('12-01-1976', 'DD-MM-YYYY'));
+
+--secventa + inserari CARTE
+
+create sequence id_carte
+start with 1
+increment by 1
+minvalue 0
+maxvalue 9999
+nocycle;
+
+insert into carte values(id_carte.nextval, 'Orbitor', 500, 'Romana');
+insert into carte values(id_carte.nextval, 'Frumoasele straine', 320, 'Romana');
+insert into carte values(id_carte.nextval, '1984', 400, 'Engleza');
+insert into carte values(id_carte.nextval, 'Poezii', 200, 'Romana');
+insert into carte values(id_carte.nextval, 'Crima din Orient Express', 350, 'Engleza');
+insert into carte values(id_carte.nextval, 'Solenoid', 600, 'Romana');
+insert into carte values(id_carte.nextval, 'My Brilliant Friend', 400, 'Engleza');
+insert into carte values(id_carte.nextval, 'Animal Farm', 200, 'Engleza');
+insert into carte values(id_carte.nextval, 'Luceafarul', 150, 'Romana');
+
+
+--inserari PUBLICA
+
+-- Orbitor, Mircea Cartarescu, Humanitas
+insert into publica values (1, 1, 1, TO_DATE('05-09-2002', 'DD-MM-YYYY'));
+-- Frumoasele străine, Mircea Cartarescu, Humanitas
+insert into publica values(2, 1, 1, TO_DATE('21-12-2004', 'DD-MM-YYYY'));
+-- 1984, George Orwell, Corint
+insert into publica values(3, 3, 2, TO_DATE('10-04-1949', 'DD-MM-YYYY'));
+-- Poezii, Mihai Eminescu, Litera
+insert into publica values(4, 4, 3, TO_DATE('19-07-1883', 'DD-MM-YYYY'));
+-- Crima din Orient Express, Agatha Christie, Berkley Books
+insert into publica values(5, 5, 5, TO_DATE('16-02-1934', 'DD-MM-YYYY'));
+-- Solenoid, Mircea Cartarescu, Humanitas
+insert into publica values(6, 1, 1, TO_DATE('29-08-2005', 'DD-MM-YYYY'));
+-- My Brilliant Friend, Elena Ferrante, Corint
+insert into publica values(7, 2, 2, TO_DATE('08-06-2011', 'DD-MM-YYYY'));
+-- Animal Farm, George Orwell, Corint
+insert into publica values(8, 3, 2, TO_DATE('14-11-1945', 'DD-MM-YYYY'));
+-- Luceafărul, Mihai Eminescu, Litera
+insert into publica values(9, 4, 3, TO_DATE('07-09-1883', 'DD-MM-YYYY'));
+
+
+--inserari IMPRUMUTA
+
+insert into imprumuta values (5, 4, 1, TO_DATE('01-01-2023', 'DD-MM-YYYY'), TO_DATE('15-01-2023', 'DD-MM-YYYY'));
+insert into imprumuta values (3, 2, 2, TO_DATE('05-02-2023', 'DD-MM-YYYY'), TO_DATE('28-02-2023', 'DD-MM-YYYY'));
+insert into imprumuta values (6, 5, 3, TO_DATE('10-03-2023', 'DD-MM-YYYY'), TO_DATE('30-03-2023', 'DD-MM-YYYY'));
+insert into imprumuta values (9, 3, 4, TO_DATE('15-04-2023', 'DD-MM-YYYY'), TO_DATE('15-05-2023', 'DD-MM-YYYY'));
+insert into imprumuta values (2, 4, 5, TO_DATE('20-05-2023', 'DD-MM-YYYY'), TO_DATE('10-06-2023', 'DD-MM-YYYY'));
+insert into imprumuta values (5, 1, 6, TO_DATE('25-06-2023', 'DD-MM-YYYY'), TO_DATE('20-07-2023', 'DD-MM-YYYY'));
+insert into imprumuta values (9, 1, 7, TO_DATE('01-08-2023', 'DD-MM-YYYY'), TO_DATE('31-08-2023', 'DD-MM-YYYY'));
+insert into imprumuta values (2, 4, 8, TO_DATE('05-09-2023', 'DD-MM-YYYY'), TO_DATE('30-09-2023', 'DD-MM-YYYY'));
+insert into imprumuta values (3, 5, 2, TO_DATE('10-10-2023', 'DD-MM-YYYY'), TO_DATE('05-11-2023', 'DD-MM-YYYY'));
+insert into imprumuta values (8, 3, 3, TO_DATE('15-11-2023', 'DD-MM-YYYY'), TO_DATE('10-12-2023', 'DD-MM-YYYY'));
+
+
+--inserari CUMPARA
+
+insert into cumpara values(1, 2, 9, TO_DATE('10-03-2019', 'DD-MM-YYYY'), 50);
+insert into cumpara values(4, 5, 4, TO_DATE('15-06-2018', 'DD-MM-YYYY'), 45);
+insert into cumpara values(9, 3, 3, TO_DATE('20-09-2020', 'DD-MM-YYYY'), 30);
+insert into cumpara values(2, 1, 10, TO_DATE('25-12-2018', 'DD-MM-YYYY'), 35);
+insert into cumpara values(7, 7, 3, TO_DATE('01-04-2015', 'DD-MM-YYYY'), 40);
+insert into cumpara values(4, 3, 8, TO_DATE('05-07-2012', 'DD-MM-YYYY'), 55);
+insert into cumpara values(6, 2, 7, TO_DATE('10-10-2018', 'DD-MM-YYYY'), 60);
+insert into cumpara values(8, 8, 5, TO_DATE('15-01-2012', 'DD-MM-YYYY'), 25);
+insert into cumpara values(2, 6, 1, TO_DATE('20-04-2021', 'DD-MM-YYYY'), 30);
+insert into cumpara values(3, 4, 2, TO_DATE('25-07-2010', 'DD-MM-YYYY'), 20);
+
+
+--inserari ARE
+
+--Orbitor, fictiune
+insert into are values(1, 1);
+--Frumoasele straine, poezie
+insert into are values(2, 2);
+--1984, fictiune
+insert into are values(3, 1);
+--Poezii, poezie
+insert into are values(4, 2);
+--Crima din Orient Express, Mister
+insert into are values(5, 5);
+--Solenoid, fictiune
+insert into are values(6, 1);
+--My Brilliant Friend, fictiune
+insert into are values(7, 1);
+--Animal Farm, fictiune
+insert into are values(8, 1);
+--Luceafarul, poezie
+insert into are values(9, 2);
+--Orbitor, biografie
+insert into are values(1,4);
+
+
+--inserari APARTINE
+
+insert into apartine values(1, 1);
+insert into apartine values(2, 3);
+insert into apartine values(3, 4);
+insert into apartine values(4, 2);
+insert into apartine values(5, 5);
+insert into apartine values(6, 1);
+insert into apartine values(7, 3);
+insert into apartine values(8, 4);
+insert into apartine values(1, 2);
+insert into apartine values(2, 5);
+insert into apartine values(9, 3);
+
+commit;

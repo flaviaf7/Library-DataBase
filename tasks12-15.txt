@@ -1,0 +1,165 @@
+--cerinta 12
+
+--1. Sa se afiseze ID-ul si numele bibliotecii care are salariu mediu 
+--pentru bibliotecari mai mic decat salariul mediu maxim din
+--bibliotecile din Cluj-Napoca.
+
+--grupari de date cu  subcereri  nesincronizate  in  care
+--intervin  cel  putin  3  tabele, funcții grup,
+--filtrare la nivel de grupuri (in cadrul aceleiasi cereri) 	
+select b.id_biblioteca, b.nume_biblioteca, round(avg(bi.salariu))
+from biblioteca b, bibliotecar bi
+where b.id_biblioteca = bi.id_biblioteca
+group by b.id_biblioteca, b.nume_biblioteca
+having round(avg(bi.salariu)) < any
+        (select max(round(avg(salariu)))
+        from biblioteca b, bibliotecar bi, locatie l
+        where b.id_biblioteca = bi.id_bibliotecar
+        and b.id_locatie = l.id_locatie
+        and lower(l.oras) = lower('Cluj-Napoca')
+        group by b.id_biblioteca); 
+    
+
+--2. Sa se afiseze id-ul bibliotecii, numele si prenumele membrului bibliotecii,
+--data lor de nastere si daca sunt majori sau nu.
+
+--2 functii pe siruri de caractere, 2 functii pe date calendaristice
+--expresie CASE
+select b.id_biblioteca, substr(b.website, 5) as site_web,
+    concat(concat(m.nume, ' '), m.prenume) as nume_membru,
+    to_char(data_nastere, 'DD-MM-YYYY') data_nastere,
+    case when (to_char(sysdate, 'YYYY') - to_char(m.data_nastere, 'YYYY')) >= 18
+        then 'Major' else 'Minor'
+    end as este_major
+from membru m, apartine a, biblioteca b
+where m.id_membru = a.id_membru
+and a.id_biblioteca = b.id_biblioteca;
+
+
+--3. Sa se afiseze pentru fiecare carte, id-ul si titlul cartii,
+--id-ul membrului care a cumparat-o si numele bibliotecii 
+--de unde a luat-o.
+
+--utilizarea a cel puțin 1 bloc de cerere(clauza WITH)
+--subcereri nesincronizate în clauza FROM
+--ordonări si utilizarea funcțiilor NVL și DECODE (in cadrul aceleiasi cereri)
+with carte1 as
+    (select distinct c.id_carte, c.titlu, p.id_membru, p.id_bibliotecar
+    from carte c, cumpara p
+    where c.id_carte = p.id_carte(+))
+select carte1.id_carte, carte1.titlu, carte1.id_membru,
+    decode(nvl(bib.id_bibliotecar, 0), 0, 'Nu a fost cumparata', bib.id_bibliotecar) vanzator,
+    bib.nume_biblioteca
+from carte1, 
+    (select id_bibliotecar, nume_biblioteca
+    from biblioteca b, bibliotecar bi
+    where b.id_biblioteca = bi.id_biblioteca) bib
+where carte1.id_bibliotecar = bib.id_bibliotecar(+)
+order by 1;
+
+
+
+--4. Sa se afiseze id-ul si numele bibliotecii, numele si salariul
+--celor mai slabi platiti bibliotecari din fiecare biblioteca care
+--au efectuat cel putin un imprumut si o vanzare.
+
+
+--subcerere sincronizata in care intervin cel putin 3 tabele
+select b.id_biblioteca, b.nume_biblioteca, bi.nume_bibliotecar, bi.salariu
+from biblioteca b, bibliotecar bi
+where bi.id_biblioteca = b.id_biblioteca
+and bi.salariu = (
+    select min(bi2.salariu)
+    from bibliotecar bi2, imprumuta i, cumpara c
+    where bi2.id_bibliotecar = i.id_bibliotecar
+    and c.id_bibliotecar = bi2.id_bibliotecar
+    and bi2.id_biblioteca = b.id_biblioteca);
+
+
+--5. Sa se afiseze numele autorilor care au publicat cel putin o carte
+--inainte de anul 1946 si care nu au nicio carte publicata dupa anul 1950.
+
+--utilizarea a cel puțin 1 bloc de cerere(clauza WITH)
+with carti_anterioare as
+    (select distinct a.nume_autor
+    from autor a, publica p
+    where a.id_autor = p.id_autor
+    and to_char(p.data_publicare, 'YYYY') < '1946'),
+carti_recente as
+    (select distinct a.nume_autor
+    from autor a, publica p
+    where a.id_autor = p.id_autor
+    and to_char(p.data_publicare, 'YYYY') >= '1950')
+select c1.nume_autor
+from carti_anterioare c1
+where c1.nume_autor not in 
+    (select c2.nume_autor
+    from carti_recente c2);
+
+
+
+
+--cerinta 13
+
+--1. operatie de actualizare
+update membru
+set nr_telefon = null
+where nume in (select m.nume from membru m where lower(m.nume) like '%radu%');
+
+--2. operatie de suprimare
+delete from locatie
+where oras = (select oras from locatie where lower(oras) like '%timisoara%');
+
+--3. operatie de actualizare
+update bibliotecar
+set salariu = 4200
+where data_angajare in (select data_angajare from bibliotecar where to_char(data_angajare, 'YYYY') <= '2010');
+
+
+--cerinta 15
+
+--1. Sa se afiseze id-urile pentru locatie, biblioteca, membru si cartile
+--cumparate de fiecare membru, inclusiv pt locatiile in care nu exista biblioteci
+--si bibliotecile care nu au niciun membru si membrii care nu au cumparat nicio carte.
+--outer join
+
+SELECT l.ID_LOCATIE, b.ID_BIBLIOTECA, m.ID_MEMBRU, c.ID_CARTE
+FROM LOCATIE l, BIBLIOTECA b, MEMBRU m, CUMPARA c, apartine ap
+WHERE l.ID_LOCATIE = b.id_locatie (+)
+and b.id_biblioteca = ap.id_biblioteca (+)
+AND m.ID_MEMBRU = c.ID_MEMBRU (+)
+and m.id_membru(+) = ap.id_membru;
+
+--2. Sa se afiseze toti membrii care apartin tuturor bibliotecilor.
+--division
+insert into apartine values(1,3);
+insert into apartine values(1,4);
+insert into apartine values(1,5);
+insert into apartine values(1,6);
+
+select distinct m.id_membru, m.nume
+from membru m
+where not exists
+    (select 1
+    from biblioteca b
+    where not exists
+        (select 1
+        from apartine a
+        where a.id_biblioteca = b.id_biblioteca
+        and a.id_membru = m.id_membru));
+        
+--3. Sa se afiseze ultimii 3 bibliotecari cu cel mai mic salariu.
+--analiza top-n
+
+select *
+from (select id_bibliotecar, nume_bibliotecar, salariu
+    from bibliotecar
+    order by salariu) t
+where rownum<=3;
+
+
+
+
+
+
+
